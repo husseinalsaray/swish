@@ -1,0 +1,42 @@
+const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const https = require('https');
+const axios = require('axios');
+
+// Läs in certifikaten
+const agent = new https.Agent({
+  cert: fs.readFileSync('./ssl/Swish_Merchant_TestCertificate_1234679304.pem', { encoding: 'utf8' }),
+  key: fs.readFileSync('./ssl/Swish_Merchant_TestCertificate_1234679304.key', { encoding: 'utf8' }),
+  ca: fs.readFileSync('./ssl/Swish_TLS_RootCA.pem', { encoding: 'utf8' }),
+});
+
+// Skapa en Axios-klient med certifikat
+const client = axios.create({
+  httpsAgent: agent
+});
+
+// Skapa unikt ID för betalningsförfrågan
+const instructionId = uuidv4();
+
+// Skicka betalningsförfrågan
+const data = {
+  payeePaymentReference: '0123456789',
+  callbackUrl: 'https://webhook.site/your-custom-url', // ← ändra till din egen URL från webhook.site
+  payeeAlias: '1234679304',
+  currency: 'SEK',
+  payerAlias: '4671234768',
+  amount: '100',
+  message: 'Testprodukt',
+  callbackIdentifier: 'ABC123456789'
+};
+
+client.put(
+  `https://mss.cpc.getswish.net/swish-cpcapi/api/v2/paymentrequests/${instructionId}`,
+  data
+).then((res) => {
+  console.log('✅ Payment request created successfully:');
+  console.log(res.data);
+}).catch((err) => {
+  console.error('❌ Error occurred:');
+  console.error(err.response?.data || err.message);
+});
